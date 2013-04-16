@@ -1,0 +1,27 @@
+{
+  "name": "graphlog.io",
+  "version": "0.0.1-alpha",
+  "private": false,
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "3.1.1",
+    "ejs": "*"
+  },
+  "readmeFilename": "README.md",
+  "gitHead": "42a59f24907ad21c112a50d8b2d2fe029f9a222f",
+  "description": "graphLog.io helps application logs to be more semantic transforming interesting pieces of log in graph nodes.",
+  "main": "app.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/gabriel-ozeas/graphlog.io.git"
+  },
+  "keywords": [
+    "log",
+    "graph",
+    "search log"
+  ],
+  "author": "Gabriel Ozeas de Oliveira",
+  "license": "BSD"
+}
