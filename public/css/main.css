@@ -58,7 +58,7 @@ body {
 	margin-top: 50px;
 	padding:20px;
 	position:relative;
-	width:960px;
+	width:100%;
 }
 
 #dashboard .node.preactive {

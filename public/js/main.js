@@ -1,9 +1,72 @@
+const NODE_SIZE_WIDTH = 100,
+	  NODE_SIZE_HEIGHT = 100;
+
 $(document).ready(function() {
-	var dashboard = $('#dashboard'),
-		actualId  = 0;
+	var actualId  = 0;
+
+	var dashboard = {
+		nodes: [],
+		element: $('#dashboard'),
+
+		addNode: function(props) {
+			var totalNodes = this.nodes.length;
+			var newTotalOfNodes = totalNodes + 1;
+
+			var nodeHorizontalDistance = this.calculateNodesXDistance(newTotalOfNodes);
+			this.repositionNodes(nodeHorizontalDistance); 
+
+			var nodePositionX = (nodeHorizontalDistance * totalNodes) + nodeHorizontalDistance;
+			var nodePosition = {x: nodePositionX, y: 20};
+
+			var newNode = new Node(nodePosition, {id: 'node-' + newTotalOfNodes});
+			
+			this.nodes.push(newNode);
+			this.element.append(newNode.element);
+
+			var that = this;
+
+			setTimeout(function() {
+				newNode.element.removeClass('preactive').addClass('active');	
+				newNode.display = true;
+
+				if (newTotalOfNodes > 1) {
+					var fromNode = that.nodes[newTotalOfNodes - 2];
+					var toNode = that.nodes[newTotalOfNodes - 1];
+
+					var link = fromNode.linkWith(toNode);
+					that.element.append(link.element);
+				}
+			}, 100);
+		},
+
+		removeNode: function(node) {
+			var nodeIndex = _.indexOf(this.nodes, node);
+			var removedNode = this.nodes.pop(nodeIndex);
+			removedNode.remove();
+
+			var distance = this.calculateNodesXDistance(_.size(this.nodes));
+			this.repositionNodes(distance);
+		},
+
+		repositionNodes: function(distance) {
+			if (this.nodes.length == 0) return;
+			
+			var x = distance;
+
+			_.each(this.nodes, function(node) {
+				var position = {x: x, y: 20};
+				node.move(position);
+				x += distance;
+			});
+		},
+
+		calculateNodesXDistance: function(numberOfNodes) {
+			return (this.element.width() / (numberOfNodes + 1)) - (NODE_SIZE_WIDTH / 2);
+		}
+	};
 
 	$('#add-log-node').click(function() {
-		addLogNode({
+		dashboard.addNode({
 			id: actualId,
 			name: actualId
 		});
@@ -11,61 +74,109 @@ $(document).ready(function() {
 		return false;
 	});
 
-	function addLogNode(nodeProperties) {
-		var newNode = $('<div><div/>').addClass('node').addClass('preactive');
-
-		if (nodeProperties.id !== undefined) {
-			newNode.attr('data-node-id', nodeProperties.id);
-		}
-
-		var totalNodes = getAllNodes().length;
-		var newTotalOfNodes = totalNodes + 1;
-
-		var nodeHorizontalDistance = (dashboard.width() / (newTotalOfNodes + 1)) - (newNode.width() / 2);
-		
-		repositionNodesInDashboard(nodeHorizontalDistance); 
-
-		var newNodePosition = (nodeHorizontalDistance * totalNodes) + nodeHorizontalDistance;
-
-		newNode.css({
-			'position': 'absolute',
-			'top': '20px',
-			'left': newNodePosition + 'px' // add it to final position 
-		});
-		dashboard.append(newNode);
-
-		setTimeout(function() {
-			newNode.removeClass('preactive').addClass('active');	
-			if (newTotalOfNodes > 1) {
-				addNodeLink(getAllNodes()[newTotalOfNodes - 2], getAllNodes()[newTotalOfNodes - 1]);
-			}
-		}, 100);
-	};
-
-	function addNodeLink(firstNode, secondNode, horizontal) {
-		console.log($(secondNode).offset().left);
-		var newLink = $('<span></span>').addClass('horizontal-link-line');
-		newLink.css({
-			'position': 'absolute',
-			'top': ($(firstNode).offset().top - ($(firstNode).height() / 2)) + 'px',
-			'left': ($(firstNode).offset().left - ($(firstNode).width() / 2)) + 'px',
-			'width': ($(secondNode).offset().left - $(firstNode).offset().left - ($(secondNode).width() / 2)) + 'px',
-			'z-index': '-1'
-		});
-		dashboard.append(newLink);
-	}
-
-	function getAllNodes() {
-		return $('.node');
-	}
-
-	function repositionNodesInDashboard(newNodeHorizontalDistance) {
-		if (getAllNodes().length == 0) return;
-
-		var positionX = newNodeHorizontalDistance;
-		getAllNodes().each(function() {
-			$(this).css('left', positionX + 'px');
-			positionX += newNodeHorizontalDistance;
-		});
-	}
+	$('#remove-log-node').click(function() {
+		var node = _.last(dashboard.nodes);
+		dashboard.removeNode(node);
+	});
 });
+
+
+function Node(position, props) {
+	return {
+		id: '',
+		name: '',
+		fromLinks: [],
+		toLinks: [],
+		displayed: false,
+		
+		element: $('<div><div/>').addClass('node').addClass('preactive'),
+
+		position: {},
+
+		init: function(position, props) {
+			if (props !== undefined) {
+				if (props.id !== undefined) {
+					this.id = props.id;
+					this.element.attr('id', this.id);
+				}
+			}
+			this.position = position;
+			this.element.css({
+				'position': 'absolute',
+				'top': this.position.y + 'px',
+				'left': this.position.x + 'px'
+			});
+
+			return this;
+		},
+
+		move: function(position) {
+			this.position = position;
+
+			$(this.element).css('left', this.position.x + 'px');
+
+			_.each(this.toLinks, function(link) {
+				link.move();
+			});
+		},
+
+		linkWith: function(node) {
+			var link = new Link(this, node);
+
+			this.fromLinks.push(link);
+			node.toLinks.push(link);
+
+			return link;
+		},
+		remove: function() {
+			this.element.remove();
+
+			_.each(this.fromLinks, function(link) {
+				link.remove();
+			});
+			this.fromLinks.length = 0;
+
+			_.each(this.toLinks, function(link) {
+				link.remove();
+			});
+			this.toLinks.length = 0;
+		}
+	}.init(position, props);
+}
+
+function Link(from, to) {
+	return {
+		fromNode: null,
+		toNode: null,
+
+		element: $('<span></span>').addClass('horizontal-link-line'),
+		
+		init: function() {
+			this.fromNode = from;
+			this.toNode = to;
+
+			this.element.css({
+				'position': 'absolute',
+				'top': (this.fromNode.position.y + (this.fromNode.element.height() / 2)) + 'px',
+				'left': (this.fromNode.position.x + (this.fromNode.element.width() / 2)) + 'px',
+				'width': (this.toNode.position.x - this.fromNode.position.x - (this.toNode.element.width() / 2)) + 'px',
+				'z-index': '-1'
+			});
+
+			return this;
+		},
+
+		move: function() {
+			console.log(this.fromNode.position);
+			console.log(this.toNode.position);
+
+			this.element.css({
+				'left': (this.fromNode.position.x + (this.fromNode.element.width() / 2)) + 'px',
+				'width': (this.toNode.position.x - this.fromNode.position.x) + 'px',
+			});
+		},
+		remove: function() {
+			this.element.remove();
+		}
+	}.init();
+}
