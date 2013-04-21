@@ -19,6 +19,7 @@ body {
 .container {
 	width:100%;
 	margin:0;
+	float:left;
 }
 #header {
 	width:100%;
@@ -56,9 +57,14 @@ body {
 
 #dashboard {
 	margin-top: 50px;
-	padding:20px;
-	position:relative;
 	width:100%;
+	position:relative;
+}
+
+#dashboard .dashboard-line {
+	width: 100%;
+	position:relative;
+	height: 130px;
 }
 
 #dashboard .node.preactive {

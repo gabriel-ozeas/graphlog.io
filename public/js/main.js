@@ -1,22 +1,73 @@
-const NODE_SIZE_WIDTH = 100,
-	  NODE_SIZE_HEIGHT = 100;
+
+var propsMap = {
+	nodeSizeWidth: 100,
+	nodeSizeHeight: 100,
+	totalLineNodes: 5
+};
 
 $(document).ready(function() {
 	var actualId  = 0;
 
 	var dashboard = {
-		nodes: [],
+		lines: [],
 		element: $('#dashboard'),
 
 		addNode: function(props) {
-			var totalNodes = this.nodes.length;
-			var newTotalOfNodes = totalNodes + 1;
+			if (_.isEmpty(this.lines)) {
+				this.lines.push(new Line());
+				this.element.append(_.last(this.lines).element);
+			}
+
+			if (_.size(_.last(this.lines).nodes) < propsMap.totalLineNodes) {
+				_.last(this.lines).addNode();
+			} else {
+				var oldLastLine = _.last(this.lines);
+
+				this.lines.push(new Line());
+				this.element.append(_.last(this.lines).element);
+
+				_.last(this.lines).addNode().linkWith(_.last(oldLastLine.nodes));
+			}
+		},
+
+		
+	};
+
+	$('#add-log-node').click(function() {
+		dashboard.addNode({
+			id: actualId,
+			name: actualId
+		});
+		actualId++;
+		return false;
+	});
+
+	$('#remove-log-node').click(function() {
+		var node = _.last(dashboard.nodes);
+		dashboard.removeNode(node);
+	});
+});
+
+function Line() {
+	return  {
+		nodes: [],
+		orientation: 'right',
+
+		element: $('<div></div>').addClass('dashboard-line'),
+
+		init: function() {
+			return this;
+		},
+
+		addNode: function() {
+			var newTotalOfNodes = this.nodes.length + 1;
 
 			var nodeHorizontalDistance = this.calculateNodesXDistance(newTotalOfNodes);
 			this.repositionNodes(nodeHorizontalDistance); 
 
-			var nodePositionX = (nodeHorizontalDistance * totalNodes) + nodeHorizontalDistance;
-			var nodePosition = {x: nodePositionX, y: 20};
+			var nodePositionX = (nodeHorizontalDistance * this.nodes.length) + nodeHorizontalDistance;
+
+			var nodePosition = {x: nodePositionX, y: 10};
 
 			var newNode = new Node(nodePosition, {id: 'node-' + newTotalOfNodes});
 			
@@ -37,6 +88,8 @@ $(document).ready(function() {
 					that.element.append(link.element);
 				}
 			}, 100);
+
+			return newNode;
 		},
 
 		removeNode: function(node) {
@@ -52,33 +105,20 @@ $(document).ready(function() {
 			if (this.nodes.length == 0) return;
 			
 			var x = distance;
+			var that = this;
 
 			_.each(this.nodes, function(node) {
-				var position = {x: x, y: 20};
+				var position = {x: x, y: node.position.y};
 				node.move(position);
 				x += distance;
 			});
 		},
 
 		calculateNodesXDistance: function(numberOfNodes) {
-			return (this.element.width() / (numberOfNodes + 1)) - (NODE_SIZE_WIDTH / 2);
+			return (this.element.width() / (numberOfNodes + 1)) - (propsMap.nodeSizeWidth / 2);
 		}
-	};
-
-	$('#add-log-node').click(function() {
-		dashboard.addNode({
-			id: actualId,
-			name: actualId
-		});
-		actualId++;
-		return false;
-	});
-
-	$('#remove-log-node').click(function() {
-		var node = _.last(dashboard.nodes);
-		dashboard.removeNode(node);
-	});
-});
+	}.init();
+}
 
 
 function Node(position, props) {
@@ -150,15 +190,20 @@ function Link(from, to) {
 		toNode: null,
 
 		element: $('<span></span>').addClass('horizontal-link-line'),
+
+		position: {},
 		
-		init: function() {
+		init: function(from, to) {
 			this.fromNode = from;
 			this.toNode = to;
 
+			this.position.x = this.fromNode.position.x + (this.fromNode.element.width() / 2);
+			this.position.y = this.fromNode.position.y + (this.fromNode.element.height() / 2);
+
 			this.element.css({
 				'position': 'absolute',
-				'top': (this.fromNode.position.y + (this.fromNode.element.height() / 2)) + 'px',
-				'left': (this.fromNode.position.x + (this.fromNode.element.width() / 2)) + 'px',
+				'top': this.position.y + 'px',
+				'left': this.position.x + 'px',
 				'width': (this.toNode.position.x - this.fromNode.position.x - (this.toNode.element.width() / 2)) + 'px',
 				'z-index': '-1'
 			});
@@ -167,9 +212,6 @@ function Link(from, to) {
 		},
 
 		move: function() {
-			console.log(this.fromNode.position);
-			console.log(this.toNode.position);
-
 			this.element.css({
 				'left': (this.fromNode.position.x + (this.fromNode.element.width() / 2)) + 'px',
 				'width': (this.toNode.position.x - this.fromNode.position.x) + 'px',
@@ -178,5 +220,5 @@ function Link(from, to) {
 		remove: function() {
 			this.element.remove();
 		}
-	}.init();
+	}.init(from, to);
 }
