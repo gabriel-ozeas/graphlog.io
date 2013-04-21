@@ -76,10 +76,10 @@ function Line() {
 
 			var that = this;
 
+			newNode.element.addClass('animated').addClass('bounceIn');	
 			setTimeout(function() {
-				newNode.element.removeClass('preactive').addClass('active');	
+				newNode.element.removeClass('bounceIn').removeClass('animated');	
 				newNode.display = true;
-
 				if (newTotalOfNodes > 1) {
 					var fromNode = that.nodes[newTotalOfNodes - 2];
 					var toNode = that.nodes[newTotalOfNodes - 1];
@@ -87,7 +87,7 @@ function Line() {
 					var link = fromNode.linkWith(toNode);
 					that.element.append(link.element);
 				}
-			}, 100);
+			}, 400);
 
 			return newNode;
 		},
@@ -115,7 +115,7 @@ function Line() {
 		},
 
 		calculateNodesXDistance: function(numberOfNodes) {
-			return (this.element.width() / (numberOfNodes + 1)) - (propsMap.nodeSizeWidth / 2);
+			return (this.element.width() / (numberOfNodes + 1)) - (propsMap.nodeSizeWidth / numberOfNodes);
 		}
 	}.init();
 }
@@ -129,7 +129,7 @@ function Node(position, props) {
 		toLinks: [],
 		displayed: false,
 		
-		element: $('<div><div/>').addClass('node').addClass('preactive'),
+		element: $('<div><div/>').addClass('node'),
 
 		position: {},
 
@@ -207,6 +207,12 @@ function Link(from, to) {
 				'width': (this.toNode.position.x - this.fromNode.position.x - (this.toNode.element.width() / 2)) + 'px',
 				'z-index': '-1'
 			});
+
+			this.element.addClass('animated').addClass('fadeIn');
+			that = this;
+			setTimeout(function() {
+				that.element.removeClass('fadeIn').removeClass('animated');
+			}, 200);
 
 			return this;
 		},
