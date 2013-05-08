@@ -1,9 +1,9 @@
 
-var propsMap = {
-	nodeSizeWidth: 100,
-	nodeSizeHeight: 100,
-	totalLineNodes: 5
-};
+var NODE_SIZE_WIDTH = 100;
+var NODE_SIZE_HEIGHT = 100;
+var INLINE_CONTAINER_TOTAL_NODES = 5;
+var LINE_HEIGHT = 200;
+
 
 $(document).ready(function() {
 	var actualId  = 0;
@@ -13,24 +13,36 @@ $(document).ready(function() {
 		element: $('#dashboard'),
 
 		addNode: function(props) {
-			if (_.isEmpty(this.lines)) {
-				this.lines.push(new Line());
-				this.element.append(_.last(this.lines).element);
-			}
+			// add line container if there's no one.
+			var line = (_.isEmpty(this.lines)) ? this.createInLineContainer({x:0, y:0}) : _.last(this.lines);
+			
+			// adding to the same line until the max of nodes
+			if (!(line.isFull())) {
 
-			if (_.size(_.last(this.lines).nodes) < propsMap.totalLineNodes) {
-				_.last(this.lines).addNode();
+				if (_.isEmpty(line.nodes)) {
+					line.addNode();
+				} else {
+					var lastNode = _.last(line.nodes);
+					line.addNodeAfter(lastNode);
+				}
+
+			// if line is full of nodes, create another
 			} else {
-				var oldLastLine = _.last(this.lines);
+				var lastLine = line;
+				
+				positionY = lastLine.position.y + LINE_HEIGHT;
 
-				this.lines.push(new Line());
-				this.element.append(_.last(this.lines).element);
-
-				_.last(this.lines).addNode().linkWith(_.last(oldLastLine.nodes));
+				line = this.createInLineContainer({x: 0, y: positionY});
+				line.addNodeAfter(_.last(lastLine.nodes));
 			}
 		},
 
-		
+		createInLineContainer: function(position) {
+			var line = new Line(this, position);
+			this.lines.push(line);
+			this.element.append(_.last(this.lines).element);
+			return line;
+		}
 	};
 
 	$('#add-log-node').click(function() {
@@ -48,15 +60,43 @@ $(document).ready(function() {
 	});
 });
 
-function Line() {
+function Line(container, position, props) {
 	return  {
-		nodes: [],
-		orientation: 'right',
+		configs: {		
+			/**
+			 * 1 indicates the nodes to be added from left to right. Otherwise, -1 do the inverse.
+			 * @type {Number}
+			 */
+			orientation: 1,
 
+			/**
+			 * Maximum number of nodes in same line container.
+			 * @type {Number}
+			 */
+			maximumOfNodes: 5,
+		},
+
+		nodes: [],
 		element: $('<div></div>').addClass('dashboard-line'),
 
-		init: function() {
+		position: {x: 0, y:0},
+		dimension: {width: 0, height: 0},
+
+		init: function(container, position, props) {
+			$.extend(this.config, props);
+
+			this.container = container;
+			this.position = position;
+
 			return this;
+		},
+
+		/**
+		 * Link this node after another node, even though the previuous node is in another line.
+		 * @param {Node} node The previous node where this will be added.
+		 */
+		addNodeAfter: function(node) {
+			var link = this.addNode().linkWith(node);
 		},
 
 		addNode: function() {
@@ -67,26 +107,17 @@ function Line() {
 
 			var nodePositionX = (nodeHorizontalDistance * this.nodes.length) + nodeHorizontalDistance;
 
-			var nodePosition = {x: nodePositionX, y: 10};
+			var nodePosition = {x: nodePositionX + (NODE_SIZE_WIDTH / 2), y: 60};
 
-			var newNode = new Node(nodePosition, {id: 'node-' + newTotalOfNodes});
+			var newNode = new Node(this, nodePosition, {id: 'node-' + newTotalOfNodes});
 			
 			this.nodes.push(newNode);
 			this.element.append(newNode.element);
-
-			var that = this;
 
 			newNode.element.addClass('animated').addClass('bounceIn');	
 			setTimeout(function() {
 				newNode.element.removeClass('bounceIn').removeClass('animated');	
 				newNode.display = true;
-				if (newTotalOfNodes > 1) {
-					var fromNode = that.nodes[newTotalOfNodes - 2];
-					var toNode = that.nodes[newTotalOfNodes - 1];
-
-					var link = fromNode.linkWith(toNode);
-					that.element.append(link.element);
-				}
 			}, 400);
 
 			return newNode;
@@ -105,7 +136,6 @@ function Line() {
 			if (this.nodes.length == 0) return;
 			
 			var x = distance;
-			var that = this;
 
 			_.each(this.nodes, function(node) {
 				var position = {x: x, y: node.position.y};
@@ -115,58 +145,105 @@ function Line() {
 		},
 
 		calculateNodesXDistance: function(numberOfNodes) {
-			return (this.element.width() / (numberOfNodes + 1)) - (propsMap.nodeSizeWidth / numberOfNodes);
+			return (this.element.width() / (numberOfNodes + 1)) - (NODE_SIZE_WIDTH / (numberOfNodes + 1));
+		},
+
+		isFull: function() {
+			return _.size(this.nodes) >= this.configs.maximumOfNodes;
+		},
+
+		getPosition: function() {
+			return {x: this.element.offset().left, y: this.element.offset().top};
 		}
-	}.init();
+	}.init(container, position, props);
 }
 
 
-function Node(position, props) {
+/**
+ * Represents a node element in the interface. 
+ * @param {Line} container The container where the Node will be added.
+ * @param {Position} position The position relative to the container where the node will be added.
+ * @param {Object} configs Another properties that can be configured can be passed.
+ */
+function Node(container, position, configs) {
 	return {
 		id: '',
 		name: '',
 		fromLinks: [],
 		toLinks: [],
+		container: null,
 		displayed: false,
+
+		configs: {
+			dimension: {width: 100, height: 100}
+		},
 		
 		element: $('<div><div/>').addClass('node'),
 
 		position: {},
 
-		init: function(position, props) {
-			if (props !== undefined) {
-				if (props.id !== undefined) {
-					this.id = props.id;
-					this.element.attr('id', this.id);
-				}
+		init: function(container, position, configs) {
+			if (configs !== undefined) {
+				$.extend(this.configs, configs);
 			}
+
+			this.container = container;
 			this.position = position;
+
+			var x = this.position.x - (this.configs.dimension.width / 2);
+			var y = this.position.y - (this.configs.dimension.height / 2);
+
 			this.element.css({
 				'position': 'absolute',
-				'top': this.position.y + 'px',
-				'left': this.position.x + 'px'
-			});
+				'top': y + 'px',
+				'left': x+ 'px'
+			}).width(this.configs.dimension.width + "px").height(this.configs.dimension.height + "px");
 
 			return this;
 		},
 
-		move: function(position) {
+		move: function(position, callback) {
 			this.position = position;
 
-			$(this.element).css('left', this.position.x + 'px');
+			var x = this.position.x - (this.configs.dimension.width / 2);
+			var y = this.position.y - (this.configs.dimension.height / 2);
+
+			$(this.element).css('left', x + 'px');
+			$(this.element).css('top', y + 'px');
+
+			var nodePosition = { x: x, y: y};
 
 			_.each(this.toLinks, function(link) {
-				link.move();
+				var toPosition = {
+					x: link.toNode.position.x + (link.toNode.element.width() / 2),
+					y: link.toNode.position.y + (link.toNode.element.height() / 2)
+				};
+				link.updateLinkPosition();
 			});
+
+			_.each(this.fromLinks, function(link) {
+				var fromPosition = {
+					x: link.fromNode.position.x + (link.fromNode.element.width() / 2),
+					y: link.fromNode.position.y + (link.fromNode.element.height() / 2)
+				};
+				link.updateLinkPosition();
+			});
+
+			if (callback) {
+				callback(position);	
+			}
 		},
 
 		linkWith: function(node) {
-			var link = new Link(this, node);
+			var link = new Link(node, this, this.container);
 
 			this.fromLinks.push(link);
 			node.toLinks.push(link);
 
 			return link;
+		},
+		isFromSameContainer: function(node) {
+			return this.container === node.container;
 		},
 		remove: function() {
 			this.element.remove();
@@ -181,7 +258,7 @@ function Node(position, props) {
 			});
 			this.toLinks.length = 0;
 		}
-	}.init(position, props);
+	}.init(container, position, configs);
 }
 
 function Link(from, to) {
@@ -191,22 +268,26 @@ function Link(from, to) {
 
 		element: $('<span></span>').addClass('horizontal-link-line'),
 
-		position: {},
+		startPoint: {x: 0, y: 0},
+		endPoint: {x: 0, y: 0},
+
+
+		dimension: {width: 0, height: 0},
+		angle: null,
+
+		container: null,
 		
 		init: function(from, to) {
 			this.fromNode = from;
 			this.toNode = to;
 
-			this.position.x = this.fromNode.position.x + (this.fromNode.element.width() / 2);
-			this.position.y = this.fromNode.position.y + (this.fromNode.element.height() / 2);
-
-			this.element.css({
-				'position': 'absolute',
-				'top': this.position.y + 'px',
-				'left': this.position.x + 'px',
-				'width': (this.toNode.position.x - this.fromNode.position.x - (this.toNode.element.width() / 2)) + 'px',
-				'z-index': '-1'
-			});
+			if (this.fromNode.position.x <= this.toNode.position.x) {
+				this.container = this.fromNode.container;	
+			} else {
+				this.container = this.toNode.container;
+			}
+			
+			this.updateLinkPosition();
 
 			this.element.addClass('animated').addClass('fadeIn');
 			that = this;
@@ -214,15 +295,51 @@ function Link(from, to) {
 				that.element.removeClass('fadeIn').removeClass('animated');
 			}, 200);
 
+			this.container.element.append(this.element);
+
 			return this;
 		},
 
-		move: function() {
+		updateLinkPosition: function() {
+			if (this.fromNode.position.x <= this.toNode.position.x) {
+				this.startPoint.x = this.fromNode.position.x; 
+				this.startPoint.y = this.fromNode.position.y;
+
+				this.endPoint.x = this.toNode.position.x; 
+				this.endPoint.y = this.toNode.position.y;								
+			} else {
+				this.startPoint.x = this.toNode.position.x; 
+				this.startPoint.y = this.toNode.position.y;
+
+				this.endPoint.x = this.fromNode.position.x; 
+				this.endPoint.y = this.fromNode.position.y;
+			}
+
+			var distanceX = Math.abs(this.endPoint.x - this.startPoint.x);
+			var distanceY = Math.abs(this.endPoint.y - this.startPoint.y);
+
+			if (!(this.fromNode.isFromSameContainer(this.toNode))) {
+				distanceY += Math.abs(this.fromNode.container.position.y - this.toNode.container.position.y);
+			}
+
+			this.dimension.width = Math.sqrt((distanceX * distanceX) + (distanceY * distanceY));
+			this.angle = - ((Math.atan2(distanceY, distanceX)) * 180 / Math.PI);
+
 			this.element.css({
-				'left': (this.fromNode.position.x + (this.fromNode.element.width() / 2)) + 'px',
-				'width': (this.toNode.position.x - this.fromNode.position.x) + 'px',
+				'position': 'absolute',
+				'top': this.startPoint.y + 'px',
+				'left': this.startPoint.x + 'px',
+				'width': this.dimension.width + 'px',
+				'-webkit-transform-origin': '0% 0%',
+				'-moz-transform-origin': '0% 0%',
+				'transform-origin': '0% 0%',
+				'-moz-transform': 'rotate(' + this.angle + 'deg)',
+				'-webkit-transform': 'rotate(' + this.angle + 'deg)',
+				'-moz-transform': 'rotate(' + this.angle + 'deg)',
+				'z-index': '-1'
 			});
 		},
+
 		remove: function() {
 			this.element.remove();
 		}

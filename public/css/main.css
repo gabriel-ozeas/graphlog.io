@@ -12,6 +12,8 @@ body {
 	background: url("/img/grain.png") top left repeat #dedede;
 	padding:0;
 	margin:0;
+
+
 }
 
 .container {
@@ -57,18 +59,16 @@ body {
 	margin-top: 50px;
 	width:100%;
 	position:relative;
+	-webkit-backface-visibility: hidden;
 }
 
 #dashboard .dashboard-line {
 	width: 100%;
 	position:relative;
-	height: 130px;
+	height: 200px;
 }
 
 #dashboard .node {
-	width:100px;
-	height:100px;
-
 	float:left;
 	display:block;
 
