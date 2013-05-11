@@ -5,8 +5,8 @@ define(['main'], function() {
 		beforeEach(function() {
 			containerA = new Line(null, {x: 0, y: 0});
 
-			nodeOne = new Node (containerA, {x: 10, y: 10});
-			nodeTwo = new Node (containerA, {x: 20, y: 20});
+			nodeOne = new Node('node-one', containerA, {x: 10, y: 10});
+			nodeTwo = new Node('node-two', containerA, {x: 20, y: 20});
 		});
 
 		it("should be able to create a basic Link", function() {
@@ -85,9 +85,7 @@ define(['main'], function() {
 
 		it("should compare to links correctly", function() {
 			var linkB = new Link(nodeOne, nodeTwo);
-
-			expect(link).toEqual(linkB);
-			expect(linkB).toEqual(link);
+			expect(link.equals(linkB)).toEqual(true);
 		});
 	});	
 });

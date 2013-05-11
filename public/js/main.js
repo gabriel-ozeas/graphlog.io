@@ -109,7 +109,7 @@ function Line(container, position, props) {
 
 			var nodePosition = {x: nodePositionX + (NODE_SIZE_WIDTH / 2), y: 60};
 
-			var newNode = new Node(this, nodePosition, {id: 'node-' + newTotalOfNodes});
+			var newNode = new Node('node-' + newTotalOfNodes, this, nodePosition);
 			
 			this.nodes.push(newNode);
 			this.element.append(newNode.element);
@@ -165,7 +165,8 @@ function Line(container, position, props) {
  * @param {Position} position The position relative to the container where the node will be added.
  * @param {Object} configs Another properties that can be configured can be passed.
  */
-function Node(container, position, configs) {
+function Node(id, container, position, configs) {
+	this.id = id;
 	this.fromLinks = [];
 	this.toLinks = [];
 
@@ -273,6 +274,7 @@ Node.prototype = {
 	isFromSameContainer: function(node) {
 		return this.container === node.container;
 	},
+
 	remove: function() {
 		this.element.remove();
 
@@ -285,6 +287,23 @@ Node.prototype = {
 			link.remove();
 		});
 		this.toLinks.length = 0;
+	},
+
+	toString: function() {
+		return "[Node id=" + this.id + ", container=" + this.container + ", position=" + this.position + "]";
+	},
+
+	/**
+	 * Compare if two nodes are equals, see the id.
+	 * @param  {[type]} Node Node to be compared
+	 * @return {[type]}      True indicates that the nodes ar equals. Otherwise return False.
+	 */
+	equals: function(node) {
+		if (!(node instanceof Node)) {
+			return false;
+		}
+
+		return (this.id === node.id)
 	}
 };
 
@@ -367,16 +386,12 @@ Link.prototype = {
 		this.element.remove();
 	},
 
-	equals: function(line) {
-		if (!line instanceof Line) {
+	equals: function(link) {
+		if (!(link instanceof Link)) {
 			return false;
 		}
 
-		if (this.fromNode === line.fromNode && this.toNode === line.toNode) {
-			return true;
-		} else {
-			return false;
-		}
+		return true;
 	}
 }
 
@@ -390,7 +405,7 @@ Point.prototype = {
 		return '[x: ' + this.x + ', y: ' + this. y + ']';
 	},
 	equals: function(point) {
-		if (!point instanceof Point) {
+		if (!(point instanceof Point)) {
 			return false;
 		}
 
