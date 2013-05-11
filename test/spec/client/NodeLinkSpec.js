@@ -1,17 +1,12 @@
 define(['main'], function() {
 	describe('NodeLink', function() {
-		var nodeOne, nodeTwo, link;
+		var nodeOne, nodeTwo, link, containerA, containerB;
 
 		beforeEach(function() {
-			nodeOne = {
-				position: {x: 10, y: 10},
-				isFromSameContainer: function() {return true}
-			};
-			nodeTwo = {
-				position: {x: 20, y: 20},
-				isFromSameContainer: function() {return true}
-			};
-			nodeOne.container = new Line(null, {x: 0, y:0});
+			containerA = new Line(null, {x: 0, y: 0});
+
+			nodeOne = new Node (containerA, {x: 10, y: 10});
+			nodeTwo = new Node (containerA, {x: 20, y: 20});
 		});
 
 		it("should be able to create a basic Link", function() {
@@ -67,6 +62,32 @@ define(['main'], function() {
 			expect(link.endPoint.y).toBe(20);
 
 			expect(link.dimension.width).toBeCloseTo(210.23, 1);
+		});
+
+		it("should move link when nodes change position", function() {
+			link = nodeOne.linkWith(nodeTwo);
+
+			expect(link.startPoint.x).toBe(10);
+			expect(link.startPoint.y).toBe(10);
+
+			expect(link.endPoint.x).toBe(20);
+			expect(link.endPoint.y).toBe(20);
+
+			expect(link.dimension.width).toBeCloseTo(14.14, 2);
+
+			nodeOne.move({x: 5, y:5});
+
+			expect(link.startPoint.x).toBe(5);
+			expect(link.startPoint.y).toBe(5);
+
+			expect(link.dimension.width).toBeCloseTo(21.21, 2);			
+		});
+
+		it("should compare to links correctly", function() {
+			var linkB = new Link(nodeOne, nodeTwo);
+
+			expect(link).toEqual(linkB);
+			expect(linkB).toEqual(link);
 		});
 	});	
 });
