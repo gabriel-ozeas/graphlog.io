@@ -8,7 +8,7 @@ require.config({
 	}
 });
 
-require(['jquery'], function($) {
+require(['jquery', 'underscore'], function($) {
 	var jasmineEnv = jasmine.getEnv(),
 		htmlReporter = new jasmine.HtmlReporter(),
 		specs = [];
@@ -19,6 +19,9 @@ require(['jquery'], function($) {
 	}
 
 	specs.push("../../test/spec/client/NodeLinkSpec");
+	specs.push("../../test/spec/client/NodeSpec");
+	specs.push("../../test/spec/client/LineSpec");
+	specs.push("../../test/spec/client/PointSpec");
 
 	$(function() {
 		require(specs, function() {
