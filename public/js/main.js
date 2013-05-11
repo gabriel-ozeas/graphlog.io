@@ -154,7 +154,7 @@ function Line(container, position, props) {
 
 		getPosition: function() {
 			return {x: this.element.offset().left, y: this.element.offset().top};
-		}
+		},
 	}.init(container, position, props);
 }
 
@@ -166,182 +166,241 @@ function Line(container, position, props) {
  * @param {Object} configs Another properties that can be configured can be passed.
  */
 function Node(container, position, configs) {
-	return {
-		id: '',
-		name: '',
-		fromLinks: [],
-		toLinks: [],
-		container: null,
-		displayed: false,
+	this.fromLinks = [];
+	this.toLinks = [];
 
-		configs: {
-			dimension: {width: 100, height: 100}
-		},
-		
-		element: $('<div><div/>').addClass('node'),
+	this.dimension = {
+		width: Node.DEFAULT_WIDTH, 
+		height: Node.DEFAULT_HEIGHT
+	}
 
-		position: {},
+	if (configs !== undefined) {
+		$.extend(this.configs, configs);
+	}
 
-		init: function(container, position, configs) {
-			if (configs !== undefined) {
-				$.extend(this.configs, configs);
-			}
+	this.container = container;
+	this.position = position;
 
-			this.container = container;
-			this.position = position;
+	var x = this.position.x - (this.dimension.width / 2);
+	var y = this.position.y - (this.dimension.height / 2);
 
-			var x = this.position.x - (this.configs.dimension.width / 2);
-			var y = this.position.y - (this.configs.dimension.height / 2);
+	this.element = $('<div><div/>').addClass('node');
+	this.element.css({
+		'position': 'absolute',
+		'top': y + 'px',
+		'left': x+ 'px'
+	}).width(this.dimension.width + "px").height(this.dimension.height + "px");
 
-			this.element.css({
-				'position': 'absolute',
-				'top': y + 'px',
-				'left': x+ 'px'
-			}).width(this.configs.dimension.width + "px").height(this.configs.dimension.height + "px");
-
-			return this;
-		},
-
-		move: function(position, callback) {
-			this.position = position;
-
-			var x = this.position.x - (this.configs.dimension.width / 2);
-			var y = this.position.y - (this.configs.dimension.height / 2);
-
-			$(this.element).css('left', x + 'px');
-			$(this.element).css('top', y + 'px');
-
-			var nodePosition = { x: x, y: y};
-
-			_.each(this.toLinks, function(link) {
-				var toPosition = {
-					x: link.toNode.position.x + (link.toNode.element.width() / 2),
-					y: link.toNode.position.y + (link.toNode.element.height() / 2)
-				};
-				link.updateLinkPosition();
-			});
-
-			_.each(this.fromLinks, function(link) {
-				var fromPosition = {
-					x: link.fromNode.position.x + (link.fromNode.element.width() / 2),
-					y: link.fromNode.position.y + (link.fromNode.element.height() / 2)
-				};
-				link.updateLinkPosition();
-			});
-
-			if (callback) {
-				callback(position);	
-			}
-		},
-
-		linkWith: function(node) {
-			var link = new Link(node, this, this.container);
-
-			this.fromLinks.push(link);
-			node.toLinks.push(link);
-
-			return link;
-		},
-		isFromSameContainer: function(node) {
-			return this.container === node.container;
-		},
-		remove: function() {
-			this.element.remove();
-
-			_.each(this.fromLinks, function(link) {
-				link.remove();
-			});
-			this.fromLinks.length = 0;
-
-			_.each(this.toLinks, function(link) {
-				link.remove();
-			});
-			this.toLinks.length = 0;
-		}
-	}.init(container, position, configs);
+	return this;
 }
 
+/**
+ * Default width size in pixels for a node.
+ * @type {Number}
+ */
+Node.DEFAULT_WIDTH = 100;
+
+/**
+ * Default height size in pixels for a node.
+ * @type {Number}
+ */
+Node.DEFAULT_HEIGHT = 100;
+
+Node.prototype = {
+	constructor: Node,
+
+	/**
+	 * Move a node, specifying the position where the node will be inside its container. 
+	 * When moving, it is considered as translation origin the component center. 
+	 * 
+	 * @param  {Position}   position Point in container limits where the node will be moved.
+	 * @param  {Function} callback A callback function called when the node was moved.
+	 */
+	move: function(position, callback) {
+		this.position = position;
+
+		var x = this.position.x;
+		var y = this.position.y - (this.dimension.height / 2);
+
+		$(this.element).css('left', x + 'px');
+		$(this.element).css('top', y + 'px');
+
+		var nodePosition = { x: x, y: y};
+
+		_.each(this.toLinks, function(link) {
+			var toPosition = {
+				x: link.toNode.position.x + (link.toNode.element.width() / 2),
+				y: link.toNode.position.y + (link.toNode.element.height() / 2)
+			};
+			link.updateLinkPosition();
+		});
+
+		_.each(this.fromLinks, function(link) {
+			var fromPosition = {
+				x: link.fromNode.position.x + (link.fromNode.element.width() / 2),
+				y: link.fromNode.position.y + (link.fromNode.element.height() / 2)
+			};
+			link.updateLinkPosition();
+		});
+
+		if (callback) {
+			callback(position);	
+		}
+	},
+
+	/**
+	 * Create a link between this node and the node passed as parameter.
+	 * This node will be the start point to the link.
+	 * 
+	 * @param  {Node} node Node where the link will end.
+	 * @return {Link}      Link between the nodes
+	 */
+	linkWith: function(node) {
+		var link = new Link(node, this, this.container);
+
+		this.fromLinks.push(link);
+		node.toLinks.push(link);
+
+		return link;
+	},
+
+	/**
+	 * Indicates if this node and the parameter Node are from the same container.
+	 * 
+	 * @param  {Node}  node Node that will be compared
+	 * @return {Boolean}    True indicates that the two nodes is from the same container. Otherwise return False.
+	 */
+	isFromSameContainer: function(node) {
+		return this.container === node.container;
+	},
+	remove: function() {
+		this.element.remove();
+
+		_.each(this.fromLinks, function(link) {
+			link.remove();
+		});
+		this.fromLinks.length = 0;
+
+		_.each(this.toLinks, function(link) {
+			link.remove();
+		});
+		this.toLinks.length = 0;
+	}
+};
+
+/**
+ * View component that link nodes.
+ * 
+ * @param {Node} from Node where the link will start from.
+ * @param {Node} to Node where the link will end.
+ */
 function Link(from, to) {
-	return {
-		fromNode: null,
-		toNode: null,
+	this.fromNode = from;
+	this.toNode = to;
 
-		element: $('<span></span>').addClass('horizontal-link-line'),
+	this.element = $('<span></span>').addClass('horizontal-link-line');
 
-		startPoint: {x: 0, y: 0},
-		endPoint: {x: 0, y: 0},
+	if (this.fromNode.position.x <= this.toNode.position.x) {
+		this.container = this.fromNode.container;	
+	} else {
+		this.container = this.toNode.container;
+	}
+	
+	this.updateLinkPosition();
 
+	this.element.addClass('animated').addClass('fadeIn');
+	that = this;
+	setTimeout(function() {
+		that.element.removeClass('fadeIn').removeClass('animated');
+	}, 200);
 
-		dimension: {width: 0, height: 0},
-		angle: null,
+	this.container.element.append(this.element);
 
-		container: null,
-		
-		init: function(from, to) {
-			this.fromNode = from;
-			this.toNode = to;
-
-			if (this.fromNode.position.x <= this.toNode.position.x) {
-				this.container = this.fromNode.container;	
-			} else {
-				this.container = this.toNode.container;
-			}
-			
-			this.updateLinkPosition();
-
-			this.element.addClass('animated').addClass('fadeIn');
-			that = this;
-			setTimeout(function() {
-				that.element.removeClass('fadeIn').removeClass('animated');
-			}, 200);
-
-			this.container.element.append(this.element);
-
-			return this;
-		},
-
-		updateLinkPosition: function() {
-			if (this.fromNode.position.x <= this.toNode.position.x) {
-				this.startPoint.x = this.fromNode.position.x; 
-				this.startPoint.y = this.fromNode.position.y;
-
-				this.endPoint.x = this.toNode.position.x; 
-				this.endPoint.y = this.toNode.position.y;								
-			} else {
-				this.startPoint.x = this.toNode.position.x; 
-				this.startPoint.y = this.toNode.position.y;
-
-				this.endPoint.x = this.fromNode.position.x; 
-				this.endPoint.y = this.fromNode.position.y;
-			}
-
-			var distanceX = Math.abs(this.endPoint.x - this.startPoint.x);
-			var distanceY = Math.abs(this.endPoint.y - this.startPoint.y);
-
-			if (!(this.fromNode.isFromSameContainer(this.toNode))) {
-				distanceY += Math.abs(this.fromNode.container.position.y - this.toNode.container.position.y);
-			}
-
-			this.dimension.width = Math.sqrt((distanceX * distanceX) + (distanceY * distanceY));
-			this.angle = - ((Math.atan2(distanceY, distanceX)) * 180 / Math.PI);
-
-			this.element.css({
-				'position': 'absolute',
-				'top': this.startPoint.y + 'px',
-				'left': this.startPoint.x + 'px',
-				'width': this.dimension.width + 'px',
-				'-webkit-transform-origin': '0% 0%',
-				'-moz-transform-origin': '0% 0%',
-				'transform-origin': '0% 0%',
-				'-moz-transform': 'rotate(' + this.angle + 'deg)',
-				'-webkit-transform': 'rotate(' + this.angle + 'deg)',
-				'-moz-transform': 'rotate(' + this.angle + 'deg)',
-				'z-index': '-1'
-			});
-		},
-
-		remove: function() {
-			this.element.remove();
-		}
-	}.init(from, to);
+	return this;
 }
+
+Link.prototype = {
+	constructor: Link,
+
+	/**
+	 * Update the link based on related node positions. 
+	 */
+	updateLinkPosition: function() {
+		if (this.fromNode.position.x <= this.toNode.position.x) {
+			this.startPoint = { x: this.fromNode.position.x, y: this.fromNode.position.y};
+			this.endPoint = {x: this.toNode.position.x, y: this.toNode.position.y};
+		} else {
+			this.startPoint = {x: this.toNode.position.x, y: this.toNode.position.y};
+			this.endPoint = { x: this.fromNode.position.x, y: this.fromNode.position.y};
+		}
+
+		var distanceX = Math.abs(this.endPoint.x - this.startPoint.x);
+		var distanceY = Math.abs(this.endPoint.y - this.startPoint.y);
+
+		if (!(this.fromNode.isFromSameContainer(this.toNode))) {
+			distanceY += Math.abs(this.fromNode.container.position.y - this.toNode.container.position.y);
+		}
+
+		this.dimension = {
+			width: Math.sqrt((distanceX * distanceX) + (distanceY * distanceY)), 
+			height: 0
+		};
+
+		this.angle = - ((Math.atan2(distanceY, distanceX)) * 180 / Math.PI);
+
+		this.element.css({
+			'position': 'absolute',
+			'top': this.startPoint.y + 'px',
+			'left': this.startPoint.x + 'px',
+			'width': this.dimension.width + 'px',
+			'-webkit-transform-origin': '0% 0%',
+			'-moz-transform-origin': '0% 0%',
+			'transform-origin': '0% 0%',
+			'-moz-transform': 'rotate(' + this.angle + 'deg)',
+			'-webkit-transform': 'rotate(' + this.angle + 'deg)',
+			'-moz-transform': 'rotate(' + this.angle + 'deg)',
+			'z-index': '-1'
+		});
+	},
+
+	remove: function() {
+		this.element.remove();
+	},
+
+	equals: function(line) {
+		if (!line instanceof Line) {
+			return false;
+		}
+
+		if (this.fromNode === line.fromNode && this.toNode === line.toNode) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+}
+
+function Point(x, y) {
+	this.x = x;
+	this.y = y;
+}
+
+Point.prototype = {
+	toString: function() {
+		return '[x: ' + this.x + ', y: ' + this. y + ']';
+	},
+	equals: function(point) {
+		if (!point instanceof Point) {
+			return false;
+		}
+
+		if (this.x === node.x && this.y === node.y) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+}
+
+
+
