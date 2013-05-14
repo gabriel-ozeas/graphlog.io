@@ -7,43 +7,9 @@ var LINE_HEIGHT = 200;
 
 $(document).ready(function() {
 	var actualId  = 0;
+	var dashboard = new NodeDashboard();
 
-	var dashboard = {
-		lines: [],
-		element: $('#dashboard'),
-
-		addNode: function(props) {
-			// add line container if there's no one.
-			var line = (_.isEmpty(this.lines)) ? this.createInLineContainer({x:0, y:0}) : _.last(this.lines);
-			
-			// adding to the same line until the max of nodes
-			if (!(line.isFull())) {
-
-				if (_.isEmpty(line.nodes)) {
-					line.addNode();
-				} else {
-					var lastNode = _.last(line.nodes);
-					line.addNodeAfter(lastNode);
-				}
-
-			// if line is full of nodes, create another
-			} else {
-				var lastLine = line;
-				
-				positionY = lastLine.position.y + LINE_HEIGHT;
-
-				line = this.createInLineContainer({x: 0, y: positionY});
-				line.addNodeAfter(_.last(lastLine.nodes));
-			}
-		},
-
-		createInLineContainer: function(position) {
-			var line = new Line(this, position);
-			this.lines.push(line);
-			this.element.append(_.last(this.lines).element);
-			return line;
-		}
-	};
+	$('#dashboard').append(dashboard.element);
 
 	$('#add-log-node').click(function() {
 		dashboard.addNode({
@@ -60,104 +26,179 @@ $(document).ready(function() {
 	});
 });
 
-function Line(container, position, props) {
-	return  {
-		configs: {		
-			/**
-			 * 1 indicates the nodes to be added from left to right. Otherwise, -1 do the inverse.
-			 * @type {Number}
-			 */
-			orientation: 1,
+function NodeDashboard(dimension) {
+	this.lines = [];
+	this.element = $('<div class="nodeDashboard"></div>');
+	this.dimension = {
+		width:0, height:0
+	};
 
-			/**
-			 * Maximum number of nodes in same line container.
-			 * @type {Number}
-			 */
-			maximumOfNodes: 5,
-		},
+	if (dimension !== undefined) {
+		this.element.width(dimension.width);
+		this.element.height(dimension.height);	
+	}
 
-		nodes: [],
-		element: $('<div></div>').addClass('dashboard-line'),
-
-		position: {x: 0, y:0},
-		dimension: {width: 0, height: 0},
-
-		init: function(container, position, props) {
-			$.extend(this.config, props);
-
-			this.container = container;
-			this.position = position;
-
-			return this;
-		},
-
-		/**
-		 * Link this node after another node, even though the previuous node is in another line.
-		 * @param {Node} node The previous node where this will be added.
-		 */
-		addNodeAfter: function(node) {
-			var link = this.addNode().linkWith(node);
-		},
-
-		addNode: function() {
-			var newTotalOfNodes = this.nodes.length + 1;
-
-			var nodeHorizontalDistance = this.calculateNodesXDistance(newTotalOfNodes);
-			this.repositionNodes(nodeHorizontalDistance); 
-
-			var nodePositionX = (nodeHorizontalDistance * this.nodes.length) + nodeHorizontalDistance;
-
-			var nodePosition = {x: nodePositionX + (NODE_SIZE_WIDTH / 2), y: 60};
-
-			var newNode = new Node('node-' + newTotalOfNodes, this, nodePosition);
-			
-			this.nodes.push(newNode);
-			this.element.append(newNode.element);
-
-			newNode.element.addClass('animated').addClass('bounceIn');	
-			setTimeout(function() {
-				newNode.element.removeClass('bounceIn').removeClass('animated');	
-				newNode.display = true;
-			}, 400);
-
-			return newNode;
-		},
-
-		removeNode: function(node) {
-			var nodeIndex = _.indexOf(this.nodes, node);
-			var removedNode = this.nodes.pop(nodeIndex);
-			removedNode.remove();
-
-			var distance = this.calculateNodesXDistance(_.size(this.nodes));
-			this.repositionNodes(distance);
-		},
-
-		repositionNodes: function(distance) {
-			if (this.nodes.length == 0) return;
-			
-			var x = distance;
-
-			_.each(this.nodes, function(node) {
-				var position = {x: x, y: node.position.y};
-				node.move(position);
-				x += distance;
-			});
-		},
-
-		calculateNodesXDistance: function(numberOfNodes) {
-			return (this.element.width() / (numberOfNodes + 1)) - (NODE_SIZE_WIDTH / (numberOfNodes + 1));
-		},
-
-		isFull: function() {
-			return _.size(this.nodes) >= this.configs.maximumOfNodes;
-		},
-
-		getPosition: function() {
-			return {x: this.element.offset().left, y: this.element.offset().top};
-		},
-	}.init(container, position, props);
+	this.dimension.width = this.element.width();
+	this.dimension.height = this.element.height();			
+	
 }
 
+NodeDashboard.prototype = {
+	addNode: function(props) {
+		// add line container if there's no one.
+		var line = (_.isEmpty(this.lines)) ? this.createInLineContainer({x:0, y:0}) : _.last(this.lines);
+		
+		// adding to the same line until the max of nodes
+		if (!(line.isFull())) {
+
+			if (_.isEmpty(line.nodes)) {
+				line.addNode();
+			} else {
+				var lastNode = _.last(line.nodes);
+				line.addNodeAfter(lastNode);
+			}
+
+		// if line is full of nodes, create another
+		} else {
+			var lastLine = line;
+			
+			positionY = lastLine.position.y + LINE_HEIGHT;
+
+			line = this.createInLineContainer({x: 0, y: positionY});
+			line.addNodeAfter(_.last(lastLine.nodes));
+		}
+	},
+
+	createInLineContainer: function(position) {
+		var line = new Line(this, position);
+		this.addLineContainer(line);
+		return line;
+	},
+
+	/**
+	 * Append line container to this dashboard
+	 * @param  {Line} line Append an existing line container to the dashboard
+	 */
+	addLineContainer: function(line) {
+		this.lines.push(line);
+		this.element.append(line.element);
+	}
+};
+
+function Line(container, position, configs) {
+	this.configs = {};
+	this.configs.orientation = Line.RIGHT_ORIENTATION;
+	this.configs.maximumOfNodes = Line.MAXIMUM_OF_NODE;
+
+	$.extend(this.config, configs);
+
+	this.nodes =  [];
+	this.element = $('<div></div>').addClass('dashboard-line');
+
+	this.dimension = {};
+	this.dimension.height = Line.DEFAULT_HEIGHT;
+
+	if (container) {
+		this.container = container;	
+		this.dimension.width = this.container.dimension.width;
+
+		this.container.addLineContainer(this);
+	}
+
+	this.position = position ? position : new Point(0,0);
+}
+
+/**
+ * Indicates tha the line container should add nodes to right by default
+ * @type {Number}
+ */
+Line.RIGHT_ORIENTATION = 1;
+
+/**
+ * Indicates tha the line container should add nodes to right by default
+ * @type {Number}
+ */
+Line.LEFT_ORIENTATION = -1;
+
+/**
+ * Maximum of nodes that can be added to the line container.
+ * @type {Number}
+ */
+Line.MAXIMUM_OF_NODE = 5;
+
+/**
+ * Default height in pixels
+ * @type {Number}
+ */
+Line.DEFAULT_HEIGHT = 200;
+
+Line.prototype = {
+	/**
+	 * Link this node after another node, even though the previuous node is in another line.
+	 * @param {Node} node The previous node where this will be added.
+	 */
+	addNodeAfter: function(node) {
+		var link = this.addNode().linkWith(node);
+	},
+
+	addNode: function() {
+		var newTotalOfNodes = this.nodes.length + 1;
+
+		var nodeHorizontalDistance = this.calculateNodesXDistance(newTotalOfNodes);
+
+		this.repositionNodes(nodeHorizontalDistance); 
+
+		var nodePositionX = (nodeHorizontalDistance * this.nodes.length) + nodeHorizontalDistance;
+
+		var nodePosition = {x: nodePositionX, y: 60};
+
+		var newNode = new Node('node-' + newTotalOfNodes, this, nodePosition);
+		
+		this.nodes.push(newNode);
+		this.element.append(newNode.element);
+
+		newNode.element.addClass('animated').addClass('bounceIn');	
+		setTimeout(function() {
+			newNode.element.removeClass('bounceIn').removeClass('animated');	
+			newNode.display = true;
+		}, 400);
+
+		return newNode;
+	},
+
+	removeNode: function(node) {
+		var nodeIndex = _.indexOf(this.nodes, node);
+		var removedNode = this.nodes.pop(nodeIndex);
+		removedNode.remove();
+
+		var distance = this.calculateNodesXDistance(_.size(this.nodes));
+		this.repositionNodes(distance);
+	},
+
+	repositionNodes: function(distance) {
+		if (this.nodes.length == 0) return;
+		
+		var x = distance;
+
+		_.each(this.nodes, function(node) {
+			var position = new Point(x, node.position.y);
+			node.move(position);
+			x += distance;
+		});
+	},
+
+	calculateNodesXDistance: function(numberOfNodes) {
+		return (this.element.width() / (numberOfNodes + 1));
+	},
+
+	isFull: function() {
+		return _.size(this.nodes) >= this.configs.maximumOfNodes;
+	},
+
+	getPosition: function() {
+		return {x: this.element.offset().left, y: this.element.offset().top};
+	},
+};
 
 /**
  * Represents a node element in the interface. 
@@ -220,7 +261,7 @@ Node.prototype = {
 	move: function(position, callback) {
 		this.position = position;
 
-		var x = this.position.x;
+		var x = this.position.x - (this.dimension.width / 2);
 		var y = this.position.y - (this.dimension.height / 2);
 
 		$(this.element).css('left', x + 'px');
