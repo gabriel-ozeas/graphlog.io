@@ -1,3 +1,5 @@
+@import url(http://fonts.googleapis.com/css?family=Just+Me+Again+Down+Here);
+
 /* Open Sans Google Font */
 @font-face {
   font-family: 'Open Sans';
@@ -12,8 +14,6 @@ body {
 	background: url("/img/grain.png") top left repeat #dedede;
 	padding:0;
 	margin:0;
-
-
 }
 
 .container {
@@ -108,6 +108,14 @@ body {
     transform: scale(1.2);
 
     cursor:pointer;
+}
+
+.node .nodeDescription {
+	font-family: 'Just Me Again Down Here', cursive, Arial, Verdana;
+	font-size:24px;
+	position:absolute;
+	bottom: -50px;
+	left:30%;
 }
 
 #dashboard .horizontal-link-line {

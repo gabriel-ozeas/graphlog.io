@@ -62,7 +62,7 @@ NodeDashboard.prototype = {
 		} else {
 			var lastLine = line;
 			
-			positionY = lastLine.position.y + LINE_HEIGHT;
+			positionY = lastLine.position.y + Line.DEFAULT_HEIGHT;
 
 			line = this.createInLineContainer({x: 0, y: positionY});
 			line.addNodeAfter(_.last(lastLine.nodes));
@@ -133,6 +133,7 @@ Line.MAXIMUM_OF_NODE = 5;
 Line.DEFAULT_HEIGHT = 200;
 
 Line.prototype = {
+	constructor: Line,
 	/**
 	 * Link this node after another node, even though the previuous node is in another line.
 	 * @param {Node} node The previous node where this will be added.
@@ -150,9 +151,13 @@ Line.prototype = {
 
 		var nodePositionX = (nodeHorizontalDistance * this.nodes.length) + nodeHorizontalDistance;
 
-		var nodePosition = {x: nodePositionX, y: 60};
+		var nodePosition = new Point(nodePositionX, 60);
+		var nodeId = 'node-' + newTotalOfNodes;
 
-		var newNode = new Node('node-' + newTotalOfNodes, this, nodePosition);
+		var nodeConfigs = {};
+		nodeConfigs.priority = Math.floor((Math.random() * 5) + 1);
+
+		var newNode = new Node(nodeId, this, nodePosition, nodeConfigs);
 		
 		this.nodes.push(newNode);
 		this.element.append(newNode.element);
@@ -208,17 +213,26 @@ Line.prototype = {
  */
 function Node(id, container, position, configs) {
 	this.id = id;
-	this.fromLinks = [];
-	this.toLinks = [];
+	this.name = id;
 
-	this.dimension = {
-		width: Node.DEFAULT_WIDTH, 
-		height: Node.DEFAULT_HEIGHT
-	}
+	this.configs = {
+		priority: Node.MAXIMUM_PRIORITY
+	};
 
 	if (configs !== undefined) {
 		$.extend(this.configs, configs);
 	}
+
+	this.fromLinks = [];
+	this.toLinks = [];
+
+	this.dimension = {};
+
+	var halfNodeWidth = Node.DEFAULT_WIDTH / 2;
+	this.dimension.width = halfNodeWidth + (halfNodeWidth * this.configs.priority) / Node.MAXIMUM_PRIORITY;
+
+	var halfNodeHeight = Node.DEFAULT_HEIGHT / 2;
+	this.dimension.height = halfNodeHeight + (halfNodeHeight * this.configs.priority) / Node.MAXIMUM_PRIORITY;
 
 	this.container = container;
 	this.position = position;
@@ -232,6 +246,9 @@ function Node(id, container, position, configs) {
 		'top': y + 'px',
 		'left': x+ 'px'
 	}).width(this.dimension.width + "px").height(this.dimension.height + "px");
+
+	var nameDescription = $('<span></span>').addClass('nodeDescription').html(this.name);
+	this.element.append(nameDescription);
 
 	return this;
 }
@@ -247,6 +264,8 @@ Node.DEFAULT_WIDTH = 100;
  * @type {Number}
  */
 Node.DEFAULT_HEIGHT = 100;
+
+Node.MAXIMUM_PRIORITY = 5;
 
 Node.prototype = {
 	constructor: Node,
@@ -347,6 +366,7 @@ Node.prototype = {
 		return (this.id === node.id)
 	}
 };
+
 
 /**
  * View component that link nodes.
