@@ -7,9 +7,7 @@ var LINE_HEIGHT = 200;
 
 $(document).ready(function() {
 	var actualId  = 0;
-	var dashboard = new NodeDashboard();
-
-	$('#dashboard').append(dashboard.element);
+	var dashboard = new NodeDashboard($('#dashboard'));
 
 	$('#add-log-node').click(function() {
 		dashboard.addNode({
@@ -26,12 +24,14 @@ $(document).ready(function() {
 	});
 });
 
-function NodeDashboard(dimension) {
+function NodeDashboard(containerElement, dimension) {
 	this.lines = [];
 	this.element = $('<div class="nodeDashboard"></div>');
 	this.dimension = {
 		width:0, height:0
 	};
+
+	containerElement.append(this.element);
 
 	if (dimension !== undefined) {
 		this.element.width(dimension.width);
@@ -40,13 +40,12 @@ function NodeDashboard(dimension) {
 
 	this.dimension.width = this.element.width();
 	this.dimension.height = this.element.height();			
-	
 }
 
 NodeDashboard.prototype = {
 	addNode: function(props) {
 		// add line container if there's no one.
-		var line = (_.isEmpty(this.lines)) ? this.createInLineContainer({x:0, y:0}) : _.last(this.lines);
+		var line = (_.isEmpty(this.lines)) ? this.createInLineContainer(new Point(0, 0), Line.RIGHT_ORIENTATION) : _.last(this.lines);
 		
 		// adding to the same line until the max of nodes
 		if (!(line.isFull())) {
@@ -64,13 +63,21 @@ NodeDashboard.prototype = {
 			
 			positionY = lastLine.position.y + Line.DEFAULT_HEIGHT;
 
-			line = this.createInLineContainer({x: 0, y: positionY});
+			if (lastLine.configs.orientation === Line.RIGHT_ORIENTATION) {
+				line = this.createInLineContainer(new Point(0, positionY), Line.LEFT_ORIENTATION);	
+			} else {
+				line = this.createInLineContainer(new Point(0, positionY), Line.RIGHT_ORIENTATION);	
+			}
+			
 			line.addNodeAfter(_.last(lastLine.nodes));
 		}
 	},
 
-	createInLineContainer: function(position) {
-		var line = new Line(this, position);
+	createInLineContainer: function(position, orientation) {
+		var configs = {};
+		configs.orientation = orientation;
+
+		var line = new Line(this, position, configs);
 		this.addLineContainer(line);
 		return line;
 	},
@@ -90,7 +97,7 @@ function Line(container, position, configs) {
 	this.configs.orientation = Line.RIGHT_ORIENTATION;
 	this.configs.maximumOfNodes = Line.MAXIMUM_OF_NODE;
 
-	$.extend(this.config, configs);
+	$.extend(this.configs, configs);
 
 	this.nodes =  [];
 	this.element = $('<div></div>').addClass('dashboard-line');
@@ -101,7 +108,6 @@ function Line(container, position, configs) {
 	if (container) {
 		this.container = container;	
 		this.dimension.width = this.container.dimension.width;
-
 		this.container.addLineContainer(this);
 	}
 
@@ -149,13 +155,16 @@ Line.prototype = {
 
 		this.repositionNodes(nodeHorizontalDistance); 
 
-		var nodePositionX = (nodeHorizontalDistance * this.nodes.length) + nodeHorizontalDistance;
+		var nodePositionX = (nodeHorizontalDistance * this.nodes.length) + nodeHorizontalDistance;;
+		if (this.configs.orientation === Line.LEFT_ORIENTATION) {
+			nodePositionX = this.dimension.width - nodePositionX;
+		} 
 
 		var nodePosition = new Point(nodePositionX, 60);
 		var nodeId = 'node-' + newTotalOfNodes;
 
 		var nodeConfigs = {};
-		nodeConfigs.priority = Math.floor((Math.random() * 5) + 1);
+		nodeConfigs.priority = Math.floor((Math.random() * Node.MAXIMUM_PRIORITY) + 1);
 
 		var newNode = new Node(nodeId, this, nodePosition, nodeConfigs);
 		
@@ -185,8 +194,13 @@ Line.prototype = {
 		
 		var x = distance;
 
+		var that = this;
 		_.each(this.nodes, function(node) {
 			var position = new Point(x, node.position.y);
+
+			if (that.configs.orientation === Line.LEFT_ORIENTATION) {
+				position.x = that.dimension.width - position.x;
+			}
 			node.move(position);
 			x += distance;
 		});
@@ -427,6 +441,9 @@ Link.prototype = {
 		};
 
 		this.angle = - ((Math.atan2(distanceY, distanceX)) * 180 / Math.PI);
+		if (this.container.configs.orientation === Line.RIGHT_ORIENTATION) {
+			this.angle = -this.angle;
+		}
 
 		this.element.css({
 			'position': 'absolute',

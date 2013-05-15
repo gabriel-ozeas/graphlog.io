@@ -5,8 +5,7 @@ define(['main'], function() {
 		beforeEach(function() {
 			setFixtures(sandbox());
 
-			container = new NodeDashboard({width: 1000, height:1000});
-			$('#sandbox').append(container.element);
+			container = new NodeDashboard($('#sandbox'), {width: 1000, height:1000});
 		});
 
 		it('create basic line container in one position', function() {
@@ -54,7 +53,7 @@ define(['main'], function() {
 		it('should link nodes from 2 different line containers', function() {
 			var line = new Line(container, {x: 0, y:0});		
 
-			var secondContainer = new NodeDashboard({width: 1000, height:1000});
+			var secondContainer = new NodeDashboard($('#sandbox'), {width: 1000, height:1000});
 			$('#sandbox').append(secondContainer.element);
 
 			var secondLine = new Line(secondContainer, {x: 0, y:0});
