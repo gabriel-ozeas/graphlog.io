@@ -277,13 +277,13 @@ function Node(id, container, position, configs) {
  * Default width size in pixels for a node.
  * @type {Number}
  */
-Node.DEFAULT_WIDTH = 200;
+Node.DEFAULT_WIDTH = 100;
 
 /**
  * Default height size in pixels for a node.
  * @type {Number}
  */
-Node.DEFAULT_HEIGHT = 200;
+Node.DEFAULT_HEIGHT = 100;
 
 /**
  * Highiest priority for a node. This is the default when not specifiy one.
@@ -395,11 +395,13 @@ function NodeLoader(node) {
 		this.remove();
 	});
 
+	this.isPlaying = true;
+
     this.drawLoader();
 }
 
 NodeLoader.DEFAULT_ANIMATION_INTERVAL = 800;
-NodeLoader.TOTAL_CHART_PIECES = 20;
+NodeLoader.TOTAL_CHART_PIECES = 10;
 
 NodeLoader.prototype = {
 	constructor: NodeLoader,
@@ -408,7 +410,13 @@ NodeLoader.prototype = {
 		var ctx = this.element.get(0).getContext('2d');
 		var center = new Point(this.element.width() / 2, this.element.height() / 2);
 
-		ctx.fillStyle = "rgba(83, 119, 122, 0.5)";
+		// add linear gradient
+	    var loaderGradient = ctx.createLinearGradient(0, 0, this.element.width(), this.element.height());
+	    // light blue
+	    loaderGradient.addColorStop(0, '#8ED6FF');   
+	    // dark blue
+	    loaderGradient.addColorStop(1, '#004CB3');
+	    ctx.fillStyle = loaderGradient;
 
 		var totalOfPieces = NodeLoader.TOTAL_CHART_PIECES,
 			totalOfPiecesToDisplay = 1;
@@ -416,11 +424,11 @@ NodeLoader.prototype = {
 		var that = this;
 		
 		var drawVisiblePieces = function drawVisiblePieces(numberOfPiecesToDisplay) {
-			ctx.clearRect(0, 0, that.element.width(), that.element.height());
-
-			if (numberOfPiecesToDisplay >= totalOfPieces) {
+			if (numberOfPiecesToDisplay > totalOfPieces) {
 				return;
 			}
+
+			ctx.clearRect(0, 0, that.element.width(), that.element.height());
 
 			var startAngle = 0;
 			var increase = ((1 / totalOfPieces) * 2 * Math.PI);
