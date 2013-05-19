@@ -53,6 +53,9 @@ body {
 	border-bottom: 01px solid #b9b9b9;
 
 	padding:10px;
+
+	box-shadow: 0 2px 4px 0 rgba(0,0,0,.15);
+	-webkit-box-shadow: 0 2px 4px 0 rgba(0,0,0,.15);
 }
 
 #dashboard {
