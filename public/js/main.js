@@ -264,6 +264,12 @@ function Node(id, container, position, configs) {
 	var nameDescription = $('<span></span>').addClass('nodeDescription').html(this.name);
 	this.element.append(nameDescription);
 
+	var that = this;
+	this.element.click(function() {
+		that.awating = (that.awating) ? 1 : - that.awating;
+		that.wait();
+	});
+
 	return this;
 }
 
@@ -271,14 +277,18 @@ function Node(id, container, position, configs) {
  * Default width size in pixels for a node.
  * @type {Number}
  */
-Node.DEFAULT_WIDTH = 100;
+Node.DEFAULT_WIDTH = 200;
 
 /**
  * Default height size in pixels for a node.
  * @type {Number}
  */
-Node.DEFAULT_HEIGHT = 100;
+Node.DEFAULT_HEIGHT = 200;
 
+/**
+ * Highiest priority for a node. This is the default when not specifiy one.
+ * @type {Number}
+ */
 Node.MAXIMUM_PRIORITY = 5;
 
 Node.prototype = {
@@ -302,19 +312,7 @@ Node.prototype = {
 
 		var nodePosition = { x: x, y: y};
 
-		_.each(this.toLinks, function(link) {
-			var toPosition = {
-				x: link.toNode.position.x + (link.toNode.element.width() / 2),
-				y: link.toNode.position.y + (link.toNode.element.height() / 2)
-			};
-			link.updateLinkPosition();
-		});
-
 		_.each(this.fromLinks, function(link) {
-			var fromPosition = {
-				x: link.fromNode.position.x + (link.fromNode.element.width() / 2),
-				y: link.fromNode.position.y + (link.fromNode.element.height() / 2)
-			};
 			link.updateLinkPosition();
 		});
 
@@ -363,6 +361,10 @@ Node.prototype = {
 		this.toLinks.length = 0;
 	},
 
+	wait: function() {
+		var awaiter = new NodeLoader(this);
+	},
+
 	toString: function() {
 		return "[Node id=" + this.id + ", container=" + this.container + ", position=" + this.position + "]";
 	},
@@ -381,6 +383,67 @@ Node.prototype = {
 	}
 };
 
+function NodeLoader(node) {
+	this.element = $('<canvas></canvas>')
+		.attr('width', node.dimension.width)
+		.attr('height', node.dimension.height);
+
+	node.element.append(this.element);
+
+	this.element.click(function(e) {
+		e.preventDefault();
+		this.remove();
+	});
+
+    this.drawLoader();
+}
+
+NodeLoader.DEFAULT_ANIMATION_INTERVAL = 800;
+NodeLoader.TOTAL_CHART_PIECES = 20;
+
+NodeLoader.prototype = {
+	constructor: NodeLoader,
+
+	drawLoader: function() {
+		var ctx = this.element.get(0).getContext('2d');
+		var center = new Point(this.element.width() / 2, this.element.height() / 2);
+
+		ctx.fillStyle = "rgba(83, 119, 122, 0.5)";
+
+		var totalOfPieces = NodeLoader.TOTAL_CHART_PIECES,
+			totalOfPiecesToDisplay = 1;
+
+		var that = this;
+		
+		var drawVisiblePieces = function drawVisiblePieces(numberOfPiecesToDisplay) {
+			ctx.clearRect(0, 0, that.element.width(), that.element.height());
+
+			if (numberOfPiecesToDisplay >= totalOfPieces) {
+				return;
+			}
+
+			var startAngle = 0;
+			var increase = ((1 / totalOfPieces) * 2 * Math.PI);
+
+			for (var i = 1; i <= numberOfPiecesToDisplay; i++) {
+				ctx.beginPath();
+				ctx.moveTo(center.x, center.y);
+				ctx.arc(center.x, center.y, that.element.width() / 2, startAngle, startAngle + increase, false);
+				ctx.lineTo(center.x, center.y);
+				ctx.fill();
+
+				startAngle = startAngle + increase;
+			}
+			setTimeout(function() {
+				numberOfPiecesToDisplay = numberOfPiecesToDisplay + 1;
+				drawVisiblePieces(numberOfPiecesToDisplay);
+			},  NodeLoader.DEFAULT_ANIMATION_INTERVAL);
+		}
+
+		setTimeout(drawVisiblePieces(totalOfPiecesToDisplay), NodeLoader.DEFAULT_ANIMATION_INTERVAL);
+	}
+};
+
 
 /**
  * View component that link nodes.
@@ -394,11 +457,9 @@ function Link(from, to) {
 
 	this.element = $('<span></span>').addClass('horizontal-link-line');
 
-	if (this.fromNode.position.x <= this.toNode.position.x) {
-		this.container = this.fromNode.container;	
-	} else {
-		this.container = this.toNode.container;
-	}
+	this.inverseLink = this.fromNode.position.x > this.toNode.position.x;
+
+	this.container = (this.inverseLink) ? this.toNode.container : this.fromNode.container;	
 	
 	this.updateLinkPosition();
 
@@ -420,10 +481,10 @@ Link.prototype = {
 	 * Update the link based on related node positions. 
 	 */
 	updateLinkPosition: function() {
-		if (this.fromNode.position.x <= this.toNode.position.x) {
-			this.startPoint = { x: this.fromNode.position.x, y: this.fromNode.position.y};
-			this.endPoint = {x: this.toNode.position.x, y: this.toNode.position.y};
-		} else {
+		this.startPoint = { x: this.fromNode.position.x, y: this.fromNode.position.y};
+		this.endPoint = {x: this.toNode.position.x, y: this.toNode.position.y};
+
+		if (this.inverseLink) {
 			this.startPoint = {x: this.toNode.position.x, y: this.toNode.position.y};
 			this.endPoint = { x: this.fromNode.position.x, y: this.fromNode.position.y};
 		}
@@ -440,8 +501,9 @@ Link.prototype = {
 			height: 0
 		};
 
-		this.angle = - ((Math.atan2(distanceY, distanceX)) * 180 / Math.PI);
-		if (this.container.configs.orientation === Line.RIGHT_ORIENTATION) {
+		this.angle = ((Math.atan2(distanceY, distanceX)) * 180) / Math.PI;
+
+		if (this.container.configs.orientation === Line.LEFT_ORIENTATION && this.inverseLink) {
 			this.angle = -this.angle;
 		}
 
