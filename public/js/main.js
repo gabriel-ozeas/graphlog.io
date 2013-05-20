@@ -266,8 +266,7 @@ function Node(id, container, position, configs) {
 
 	var that = this;
 	this.element.click(function() {
-		that.awating = (that.awating) ? 1 : - that.awating;
-		that.wait();
+		that.toogleWait();
 	});
 
 	return this;
@@ -361,8 +360,17 @@ Node.prototype = {
 		this.toLinks.length = 0;
 	},
 
-	wait: function() {
-		var awaiter = new NodeLoader(this);
+	toogleWait: function() {
+		if (this.loader === undefined) {
+			this.loader = new NodeLoader(this);
+		}
+
+		if (!(this.awating)) {
+			this.loader.play();
+		} else {
+			this.loader.stop();
+		}
+		this.awating = (this.awating === undefined) ? 1 : - this.awating;
 	},
 
 	toString: function() {
@@ -383,10 +391,12 @@ Node.prototype = {
 	}
 };
 
-function NodeLoader(node) {
+function NodeLoader(node, timeout) {
 	this.element = $('<canvas></canvas>')
 		.attr('width', node.dimension.width)
 		.attr('height', node.dimension.height);
+
+	this.centerPosition = new Point(node.dimension.width / 2, node.dimension.height / 2);
 
 	node.element.append(this.element);
 
@@ -395,38 +405,37 @@ function NodeLoader(node) {
 		this.remove();
 	});
 
-	this.isPlaying = true;
-
-    this.drawLoader();
+	this.isPlaying = false;
 }
 
-NodeLoader.DEFAULT_ANIMATION_INTERVAL = 800;
+NodeLoader.DEFAULT_ANIMATION_INTERVAL = 100;
 NodeLoader.TOTAL_CHART_PIECES = 10;
 
 NodeLoader.prototype = {
 	constructor: NodeLoader,
 
+	play: function() {
+		this.isPlaying = true;
+		this.drawLoader();
+	},
+
+	stop: function() {
+		this.isPlaying = false;
+	},
+
 	drawLoader: function() {
 		var ctx = this.element.get(0).getContext('2d');
-		var center = new Point(this.element.width() / 2, this.element.height() / 2);
-
-		// add linear gradient
-	    var loaderGradient = ctx.createLinearGradient(0, 0, this.element.width(), this.element.height());
-	    // light blue
-	    loaderGradient.addColorStop(0, '#8ED6FF');   
-	    // dark blue
-	    loaderGradient.addColorStop(1, '#004CB3');
-	    ctx.fillStyle = loaderGradient;
+		var center = this.centerPosition;
 
 		var totalOfPieces = NodeLoader.TOTAL_CHART_PIECES,
 			totalOfPiecesToDisplay = 1;
 
 		var that = this;
 		
-		var drawVisiblePieces = function drawVisiblePieces(numberOfPiecesToDisplay) {
+		var drawVisiblePieces = function drawVisiblePieces(numberOfPiecesToDisplay, highlightPiece) {
 			if (numberOfPiecesToDisplay > totalOfPieces) {
-				return;
-			}
+				return;	
+			} 
 
 			ctx.clearRect(0, 0, that.element.width(), that.element.height());
 
@@ -434,24 +443,36 @@ NodeLoader.prototype = {
 			var increase = ((1 / totalOfPieces) * 2 * Math.PI);
 
 			for (var i = 1; i <= numberOfPiecesToDisplay; i++) {
+				if (this.isPlaying === false) {
+					return;
+				}
+
+				if (i == highlightPiece || i + 1 === highlightPiece) {
+					ctx.fillStyle = '#68B3AF';
+				} else {
+					ctx.fillStyle = '#87BDB1';
+				}
+				ctx.strokeStyle = '#C3DBB4';
+
 				ctx.beginPath();
 				ctx.moveTo(center.x, center.y);
-				ctx.arc(center.x, center.y, that.element.width() / 2, startAngle, startAngle + increase, false);
+				ctx.arc(center.x, center.y, (that.element.width() / 2) - 2, startAngle, startAngle + increase, false);
 				ctx.lineTo(center.x, center.y);
 				ctx.fill();
-
+				ctx.stroke();
+				
 				startAngle = startAngle + increase;
 			}
 			setTimeout(function() {
-				numberOfPiecesToDisplay = numberOfPiecesToDisplay + 1;
-				drawVisiblePieces(numberOfPiecesToDisplay);
+				var pieces = Math.min(numberOfPiecesToDisplay + 1, totalOfPieces);
+
+				drawVisiblePieces(pieces, (highlightPiece % totalOfPieces) + 1);
 			},  NodeLoader.DEFAULT_ANIMATION_INTERVAL);
 		}
 
-		setTimeout(drawVisiblePieces(totalOfPiecesToDisplay), NodeLoader.DEFAULT_ANIMATION_INTERVAL);
+		setTimeout(drawVisiblePieces(totalOfPiecesToDisplay, totalOfPiecesToDisplay), NodeLoader.DEFAULT_ANIMATION_INTERVAL);
 	}
 };
-
 
 /**
  * View component that link nodes.
