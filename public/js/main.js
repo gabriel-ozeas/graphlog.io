@@ -22,6 +22,45 @@ $(document).ready(function() {
 		var node = _.last(dashboard.nodes);
 		dashboard.removeNode(node);
 	});
+
+	
+	$('#next-node').click(function() {
+		var processLog = function processLog(node) {
+			var random = Math.floor(Math.random() * 100);
+
+			if ((random % 3) != 0) {
+				node.success();
+				node = _.first(node.toLinks).toNode;
+				node.wait();
+
+				setTimeout(function() {
+					processLog(node)
+				}, 3000);
+			} else {
+				node.fail();
+				var disablingNode = _.first(node.toLinks).toNode;
+				while (disablingNode !== undefined && disablingNode !== null) {
+					disablingNode.disable();
+
+					var toLink = _.first(disablingNode.toLinks);
+					if (toLink !== undefined && disablingNode !== null) {
+						disablingNode = toLink.toNode;	
+					} else {
+						disablingNode = null;
+					}
+				}
+			}
+			
+		};
+
+		var node;
+		node = _.first(_.first(dashboard.lines).nodes);	
+		node.wait();
+		setTimeout(function() {
+			processLog(node);
+		}, 3000);
+		
+	});
 });
 
 function NodeDashboard(containerElement, dimension) {
@@ -264,12 +303,6 @@ function Node(id, container, position, configs) {
 	var nameDescription = $('<span></span>').addClass('nodeDescription').html(this.name);
 	this.element.append(nameDescription);
 
-	var that = this;
-	this.element.click(function() {
-		that.toogleWait();
-		//that.element.toggleClass('node-success');
-	});
-
 	return this;
 }
 
@@ -361,23 +394,32 @@ Node.prototype = {
 		this.toLinks.length = 0;
 	},
 
-	toogleWait: function() {
+	wait: function() {
 		if (this.loader === undefined) {
 			this.loader = new NodeLoader(this);
 		}
 
 		if (!(this.awating)) {
 			this.loader.play();
-
-			var that = this;
-			setTimeout(function() {
-				that.loader.stop();
-				that.element.addClass('node-fail');
-			}, 5000);
-		} else {
-			this.loader.stop();
-		}
+		} 
 		this.awating = (this.awating === undefined) ? 1 : - this.awating;
+		return this;
+	},
+
+	success: function() {
+		this.loader.stop();
+		this.element.addClass('node-success');
+		return this;
+	},
+
+	fail: function() {
+		this.loader.stop();
+		this.element.addClass('node-fail');	
+		return this;
+	},
+
+	disable: function() {
+		this.element.addClass('node-disabled');
 	},
 
 	toString: function() {
