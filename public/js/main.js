@@ -267,6 +267,7 @@ function Node(id, container, position, configs) {
 	var that = this;
 	this.element.click(function() {
 		that.toogleWait();
+		//that.element.toggleClass('node-success');
 	});
 
 	return this;
@@ -367,6 +368,12 @@ Node.prototype = {
 
 		if (!(this.awating)) {
 			this.loader.play();
+
+			var that = this;
+			setTimeout(function() {
+				that.loader.stop();
+				that.element.addClass('node-fail');
+			}, 5000);
 		} else {
 			this.loader.stop();
 		}
@@ -408,7 +415,7 @@ function NodeLoader(node, timeout) {
 	this.isPlaying = false;
 }
 
-NodeLoader.DEFAULT_ANIMATION_INTERVAL = 100;
+NodeLoader.DEFAULT_ANIMATION_INTERVAL = 50;
 NodeLoader.TOTAL_CHART_PIECES = 10;
 
 NodeLoader.prototype = {
@@ -416,11 +423,14 @@ NodeLoader.prototype = {
 
 	play: function() {
 		this.isPlaying = true;
+		this.element.show();
+
 		this.drawLoader();
 	},
 
 	stop: function() {
 		this.isPlaying = false;
+		this.element.hide();
 	},
 
 	drawLoader: function() {
