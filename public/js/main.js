@@ -485,7 +485,7 @@ NodeLoader.prototype = {
 		var that = this;
 		
 		var drawVisiblePieces = function drawVisiblePieces(numberOfPiecesToDisplay, highlightPiece) {
-			if (numberOfPiecesToDisplay > totalOfPieces) {
+			if (numberOfPiecesToDisplay > totalOfPieces || that.isPlaying === false) {
 				return;	
 			} 
 
@@ -495,10 +495,7 @@ NodeLoader.prototype = {
 			var increase = ((1 / totalOfPieces) * 2 * Math.PI);
 
 			for (var i = 1; i <= numberOfPiecesToDisplay; i++) {
-				if (this.isPlaying === false) {
-					return;
-				}
-
+				console.log(that.isPlaying);
 				if (i == highlightPiece || i + 1 === highlightPiece) {
 					ctx.fillStyle = '#68B3AF';
 				} else {
