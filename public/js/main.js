@@ -9,6 +9,21 @@ $(document).ready(function() {
 	var actualId  = 0;
 	var dashboard = new NodeDashboard($('#dashboard'));
 
+	var nodePackages = [
+		{name: "io.graphlog", subs:[
+			{name: "io.graphlog.transactions", subs:[
+				{name: "io.graphlog.transactions.workflow", subs: []},
+				{name: "io.graphlog.transactions.renotification", subs: []},
+				{name: "io.graphlog.transactions.email", subs: []}
+			]},
+			{name: "io.graphlog.accounts"},
+			{name: "io.graphlog.bids"}
+		]}
+	];
+
+	var packageExplorer = new PackageExplorer(nodePackages);
+	$('#dashboard-editor-palette').append(packageExplorer.element);
+
 	$('#add-log-node').click(function() {
 		dashboard.addNode({
 			id: actualId,
@@ -21,6 +36,11 @@ $(document).ready(function() {
 	$('#remove-log-node').click(function() {
 		var node = _.last(dashboard.nodes);
 		dashboard.removeNode(node);
+	});
+
+	$('#dashboard-editor-palette #package-tree-viewer ul li').click(function(e) {
+		e.preventDefault();
+		return false;
 	});
 
 	
@@ -633,7 +653,112 @@ Point.prototype = {
 			return false;
 		}
 	}
+};
+
+function PackageExplorer(packages) {
+	this.packages = packages;
+	this.element = $('<div id="package-tree-viewer"></div>');
+
+	var tree = new PackageExplorerTree();
+
+	_.each(packages, function(packageItem){
+		var item = new PackageExplorerItem(packageItem);
+		tree.addItem(item);
+	});
+
+	this.element.append(tree.element);
+
+	tree.expand();
+};
+
+
+function PackageExplorerItem(packageItem) {
+	if (_.isUndefined(packageItem)) return;
+
+	this.hasSubPackages = !(_.isUndefined(packageItem.subs)) && !(_.isEmpty(packageItem.subs));
+	this.element = $('<li></li>');
+
+	this.collapseElement = $('<span></span>').addClass('icon');
+	this.packageElement = $('<span></span>').addClass('icon');
+	this.labelElement = $('<label></label>').html(packageItem.name);
+
+	var that = this;
+
+	if (this.hasSubPackages) {
+		this.collapseElement.addClass('tree-plus');
+		this.collapseElement.click(function() {
+			if (that.tree.collapsed) {
+				that.expand();	
+			} else {
+				that.collapse();
+			}
+		});
+		this.packageElement.addClass('package');
+	} else {
+		this.collapseElement.addClass('tree-empty');
+		this.packageElement.addClass('empty-package');
+	}
+
+	this.element.append(this.collapseElement).append(this.packageElement).append(this.labelElement);
+
+	if (this.hasSubPackages) {
+		this.tree = new PackageExplorerTree();
+
+		
+		_.each(packageItem.subs, function(subPackage) {
+			var subItem = new PackageExplorerItem(subPackage);
+			that.tree.addItem(subItem);
+		});
+
+		this.element.append(that.tree.element);
+	}
+};
+
+PackageExplorerItem.prototype = {
+	constructor: PackageExplorerItem,
+
+	collapse: function() {
+		if (!this.hasSubPackages) {
+			return;
+		}
+
+		this.tree.collapse();
+		this.collapseElement.removeClass('tree-minus').addClass('tree-plus');
+	},
+
+	expand: function() {
+		if (!this.hasSubPackages) {
+			return;
+		}
+		this.tree.expand();
+		this.collapseElement.removeClass('tree-plus').addClass('tree-minus');	
+	}
+};
+
+function PackageExplorerTree() {
+	this.items = [];
+	this.element = $('<ul></ul>').hide();
+	this.collapsed = true;
 }
+
+PackageExplorerTree.prototype = {
+	addItem: function(packageItem) {
+		this.items.push(packageItem);
+		this.element.append(packageItem.element);
+	},
+
+	collapse: function() {
+		this.element.hide();
+		this.collapsed = true;
+	},
+
+	expand: function() {
+		this.element.show();
+		this.collapsed = false;
+	}
+};
+
+
 
 
 

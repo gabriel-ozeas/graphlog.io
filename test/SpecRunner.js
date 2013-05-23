@@ -22,6 +22,7 @@ require(['jquery', 'underscore'], function($) {
 	specs.push("../../test/spec/client/NodeSpec");
 	specs.push("../../test/spec/client/LineSpec");
 	specs.push("../../test/spec/client/PointSpec");
+	specs.push("../../test/spec/client/PackageExplorerSpec");
 
 	$(function() {
 		require(specs, function() {
