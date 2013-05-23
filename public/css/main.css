@@ -104,7 +104,7 @@ body {
 }
 
 #dashboard-editor-palette #package-tree-viewer {
-	width:400px;
+	width:30%;
 	height: 100px;
 	overflow: scroll;
 	margin:10px;
@@ -159,6 +159,17 @@ body {
 	vertical-align: middle;
 }
 
+#node-palette {
+	width:65%;
+	margin-left:5px;
+	border: 01px solid #d2d2d2;
+	height: 110px;
+	margin-top:10px;
+	overflow: scroll;
+	float:left;
+	display: block;
+}
+
 #pallet {
 	background: #ededed; /* Old browsers */
 	/* IE9 SVG, needs conditional override of 'filter' to 'none' */
@@ -193,7 +204,7 @@ body {
 	height: 200px;
 }
 
-#dashboard .node {
+#dashboard .node, #node-palette .node {
 	float:left;
 	display:block;
 
@@ -214,6 +225,13 @@ body {
     -webkit-transition: all 0.1s ease-in-out; /* Safari and Chrome */
     -o-transition: all 0.1s ease-in-out; /* Opera */
     -ms-transition: all 0.1s ease-in-out; /* IE9 (maybe) */
+}
+
+#node-palette #node-palette-list {
+	width:2000px;
+}
+#node-palette .node {
+	margin:12px;
 }
 
 #dashboard .node-fail {
