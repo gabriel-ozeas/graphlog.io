@@ -55,7 +55,7 @@ $(document).ready(function() {
 
 				setTimeout(function() {
 					processLog(node)
-				}, 3000);
+				}, 6000);
 			} else {
 				node.fail();
 				var disablingNode = _.first(node.toLinks).toNode;
@@ -78,7 +78,7 @@ $(document).ready(function() {
 		node.wait();
 		setTimeout(function() {
 			processLog(node);
-		}, 3000);
+		}, 6000);
 		
 	});
 });
@@ -460,7 +460,13 @@ Node.prototype = {
 	}
 };
 
-function NodeLoader(node, timeout) {
+/**
+ * Node Loader View used to display a progress pie loader 
+ * used to wait the log.
+ * 
+ * @param {Node} node    Node here this loader will be added and used
+ */
+function NodeLoader(node) {
 	this.element = $('<canvas></canvas>')
 		.attr('width', node.dimension.width)
 		.attr('height', node.dimension.height);
@@ -477,8 +483,17 @@ function NodeLoader(node, timeout) {
 	this.isPlaying = false;
 }
 
+/**
+ * Default interval between each draw of the loader in miliseconds
+ * @type {Number}
+ */
 NodeLoader.DEFAULT_ANIMATION_INTERVAL = 50;
-NodeLoader.TOTAL_CHART_PIECES = 10;
+
+/**
+ * Total of pie pieces that the loader will be divided
+ * @type {Number}
+ */
+NodeLoader.TOTAL_CHART_PIECES = 20;
 
 NodeLoader.prototype = {
 	constructor: NodeLoader,
@@ -514,14 +529,18 @@ NodeLoader.prototype = {
 			var startAngle = 0;
 			var increase = ((1 / totalOfPieces) * 2 * Math.PI);
 
+			
+
 			for (var i = 1; i <= numberOfPiecesToDisplay; i++) {
-				console.log(that.isPlaying);
-				if (i == highlightPiece || i + 1 === highlightPiece) {
-					ctx.fillStyle = '#68B3AF';
-				} else {
-					ctx.fillStyle = '#87BDB1';
+				// if (i == highlightPiece || i + 1 === highlightPiece) {
+	
+				var alpha = i / (highlightPiece / 2);
+				if (highlightPiece - i < 0) {
+					alpha = Math.abs((highlightPiece - i)) / (totalOfPieces);
 				}
-				ctx.strokeStyle = '#C3DBB4';
+
+				ctx.fillStyle = 'rgba(78, 75, 68, ' + alpha + ')';
+				ctx.strokeStyle = '#f0f0f0';
 
 				ctx.beginPath();
 				ctx.moveTo(center.x, center.y);
@@ -533,13 +552,16 @@ NodeLoader.prototype = {
 				startAngle = startAngle + increase;
 			}
 			setTimeout(function() {
-				var pieces = Math.min(numberOfPiecesToDisplay + 1, totalOfPieces);
+				var pieces = numberOfPiecesToDisplay + 1;
+				pieces = Math.min(pieces, totalOfPieces);
 
 				drawVisiblePieces(pieces, (highlightPiece % totalOfPieces) + 1);
 			},  NodeLoader.DEFAULT_ANIMATION_INTERVAL);
 		}
 
-		setTimeout(drawVisiblePieces(totalOfPiecesToDisplay, totalOfPiecesToDisplay), NodeLoader.DEFAULT_ANIMATION_INTERVAL);
+		setTimeout(function() {
+			drawVisiblePieces(totalOfPiecesToDisplay, totalOfPiecesToDisplay);
+		}, NodeLoader.DEFAULT_ANIMATION_INTERVAL);
 	}
 };
 
